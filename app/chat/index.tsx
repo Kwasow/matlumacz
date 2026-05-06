@@ -21,6 +21,16 @@ type Response = {
 
 const responses: Response[] = require('@/assets/responses.json');
 
+const renderSafeView = (children: React.ReactNode) => {
+  return React.Children.map(children, (child) =>
+    typeof child === 'string' || typeof child === 'number'
+      ? String(child).trim() === ''
+        ? null
+        : <ThemedText>{child}</ThemedText>
+      : child
+  );
+};
+
 // Custom markdown components that work with Paper
 const MarkdownComponents = {
   text: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.markdownText}>{children}</ThemedText>,
@@ -38,15 +48,15 @@ const MarkdownComponents = {
   h2: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading2}>{children}</ThemedText>,
   h3: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading3}>{children}</ThemedText>,
   h4: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading4}>{children}</ThemedText>,
-  ul: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{children}</View>,
-  ol: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{children}</View>,
-  li: ({ children }: { children: React.ReactNode }) => <View style={styles.listItem}><ThemedText>{children}</ThemedText></View>,
-  blockquote: ({ children }: { children: React.ReactNode }) => <View style={styles.blockquote}>{children}</View>,
+  ul: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{renderSafeView(children)}</View>,
+  ol: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{renderSafeView(children)}</View>,
+  li: ({ children }: { children: React.ReactNode }) => <View style={styles.listItem}>{renderSafeView(children)}</View>,
+  blockquote: ({ children }: { children: React.ReactNode }) => <View style={styles.blockquote}>{renderSafeView(children)}</View>,
   hr: () => <View style={styles.hr} />,
-  table: ({ children }: { children: React.ReactNode }) => <View style={styles.table}>{children}</View>,
-  thead: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{children}</View>,
-  tbody: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
-  tr: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{children}</View>,
+  table: ({ children }: { children: React.ReactNode }) => <View style={styles.table}>{renderSafeView(children)}</View>,
+  thead: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{renderSafeView(children)}</View>,
+  tbody: ({ children }: { children: React.ReactNode }) => <View>{renderSafeView(children)}</View>,
+  tr: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{renderSafeView(children)}</View>,
   th: ({ children }: { children: React.ReactNode }) => <View style={styles.tableCellHeader}><ThemedText style={styles.tableCellText}>{children}</ThemedText></View>,
   td: ({ children }: { children: React.ReactNode }) => <View style={styles.tableCell}><ThemedText style={styles.tableCellText}>{children}</ThemedText></View>,
 };
