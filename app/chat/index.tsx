@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FlatList, KeyboardAvoidingView, type ListRenderItem, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Card, IconButton, PaperProvider, useTheme } from 'react-native-paper';
+import { IconButton, PaperProvider, useTheme } from 'react-native-paper';
 
 type Message = {
   id: string;
@@ -186,25 +186,28 @@ export default function ChatScreen() {
 
     return (
       <View style={[styles.messageContainer, isUser ? styles.userContainer : styles.assistantContainer]}>
-        <Card
-          mode="outlined"
-          style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
-          contentStyle={styles.messageContent}
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userBubble : [styles.assistantBubble, { backgroundColor, borderColor: textColor + '30', borderWidth: 1 }]
+          ]}
         >
-          {isUser ? (
-            <ThemedText style={styles.userText}>{item.content}</ThemedText>
-          ) : (
-            <View style={styles.markdownContainer}>
-              <ReactMarkdown components={MarkdownComponents}>
-                {item.content}
-              </ReactMarkdown>
-              {item.isStreaming && <ThemedText style={styles.streamingIndicator}>|</ThemedText>}
-            </View>
-          )}
-        </Card>
+          <View style={styles.messageContent}>
+            {isUser ? (
+              <ThemedText style={styles.userText}>{item.content}</ThemedText>
+            ) : (
+              <View style={styles.markdownContainer}>
+                <ReactMarkdown components={MarkdownComponents}>
+                  {item.content}
+                </ReactMarkdown>
+                {item.isStreaming && <ThemedText style={styles.streamingIndicator}>|</ThemedText>}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     );
-  }, []);
+  }, [backgroundColor, textColor]);
 
   return (
     <>
@@ -239,7 +242,7 @@ export default function ChatScreen() {
           </View>
 
           {/* Main Content */}
-          <View style={styles.mainContent}>
+          <View style={[styles.mainContent, { backgroundColor }]}>
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.keyboardAvoiding}
@@ -255,7 +258,7 @@ export default function ChatScreen() {
               />
 
               {/* Input Area */}
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, { backgroundColor, borderColor: textColor + '30' }]}>
                 <TextInput
                   ref={inputRef}
                   style={[styles.input, { color: textColor }]}
@@ -296,7 +299,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F0F2F5',
   },
 
   // ── Sidebar ──────────────────────────────────────────────────────────
@@ -358,7 +360,6 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#F0F2F5',
   },
   keyboardAvoiding: {
     flex: 1,
@@ -388,7 +389,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
-    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -410,28 +410,24 @@ const styles = StyleSheet.create({
   markdownText: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownParagraph: {
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 10,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownBold: {
     fontWeight: 'bold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownItalic: {
     fontStyle: 'italic',
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   inlineCode: {
@@ -459,28 +455,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginVertical: 8,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading2: {
     fontSize: 18,
     fontWeight: 'bold',
     marginVertical: 8,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading3: {
     fontSize: 16,
     fontWeight: 'bold',
     marginVertical: 6,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading4: {
     fontSize: 15,
     fontWeight: 'bold',
     marginVertical: 4,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   list: {
@@ -532,7 +524,6 @@ const styles = StyleSheet.create({
   },
   tableCellText: {
     fontSize: 13,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   streamingIndicator: {
