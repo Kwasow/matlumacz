@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, FlatList, type ListRenderItem, View } from 'react-native';
-import ReactMarkdown from 'react-markdown';
-import { ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
-import { Button, Card, IconButton, PaperProvider, useTheme } from 'react-native-paper';
+import { Stack } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import { FlatList, KeyboardAvoidingView, type ListRenderItem, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
+import { Card, IconButton, PaperProvider, useTheme } from 'react-native-paper';
 
 type Message = {
   id: string;
@@ -196,85 +197,88 @@ export default function ChatScreen() {
   }, []);
 
   return (
-    <PaperProvider>
-      <ThemedView style={styles.container}>
-        {/* Sidebar Navigation */}
-        <View style={styles.sidebar}>
-          {/* App title / branding */}
-          <View style={styles.sidebarHeader}>
-            <ThemedText style={styles.sidebarTitle}>Matłumacz</ThemedText>
-            <ThemedText style={styles.sidebarSubtitle}>AI Assistant</ThemedText>
-          </View>
+    <>
+      <Stack.Header hidden={true} />
+      <PaperProvider>
+        <ThemedView style={styles.container}>
+          {/* Sidebar Navigation */}
+          <View style={styles.sidebar}>
+            {/* App title / branding */}
+            <View style={styles.sidebarHeader}>
+              <ThemedText style={styles.sidebarTitle}>Matłumacz</ThemedText>
+              <ThemedText style={styles.sidebarSubtitle}>AI Assistant</ThemedText>
+            </View>
 
-          <View style={styles.sidebarDivider} />
+            <View style={styles.sidebarDivider} />
 
-          {/* Nav items */}
-          <View style={styles.navSection}>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <IconButton icon="chat-plus-outline" size={20} style={styles.navItemIcon} />
-              <ThemedText style={styles.navItemLabel}>New Chat</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <IconButton icon="history" size={20} style={styles.navItemIcon} />
-              <ThemedText style={styles.navItemLabel}>History</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-              <IconButton icon="cog-outline" size={20} style={styles.navItemIcon} />
-              <ThemedText style={styles.navItemLabel}>Settings</ThemedText>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Main Content */}
-        <View style={styles.mainContent}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={styles.keyboardAvoiding}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
-          >
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={renderMessage}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            />
-
-            {/* Input Area */}
-            <View style={styles.inputWrapper}>
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, { color: textColor }]}
-                value={input}
-                onChangeText={setInput}
-                placeholder="Type your message..."
-                placeholderTextColor={textColor + '80'}
-                multiline
-                onSubmitEditing={handleSend}
-                blurOnSubmit={false}
-                onKeyPress={handleKeyPress}
-                returnKeyType="send"
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!input.trim() || responseIndex >= responses.length) && styles.sendButtonDisabled]}
-                onPress={handleSend}
-                disabled={!input.trim() || responseIndex >= responses.length}
-                activeOpacity={0.8}
-              >
-                <IconButton icon="send" size={20} iconColor="white" style={styles.sendIcon} />
+            {/* Nav items */}
+            <View style={styles.navSection}>
+              <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+                <IconButton icon="chat-plus-outline" size={20} style={styles.navItemIcon} />
+                <ThemedText style={styles.navItemLabel}>New Chat</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+                <IconButton icon="history" size={20} style={styles.navItemIcon} />
+                <ThemedText style={styles.navItemLabel}>History</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+                <IconButton icon="cog-outline" size={20} style={styles.navItemIcon} />
+                <ThemedText style={styles.navItemLabel}>Settings</ThemedText>
               </TouchableOpacity>
             </View>
-          </KeyboardAvoidingView>
+          </View>
 
-          {responseIndex >= responses.length && (
-            <View style={styles.endOfResponses}>
-              <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
-            </View>
-          )}
-        </View>
-      </ThemedView>
-    </PaperProvider>
+          {/* Main Content */}
+          <View style={styles.mainContent}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.keyboardAvoiding}
+              keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+            >
+              <FlatList
+                ref={flatListRef}
+                data={messages}
+                renderItem={renderMessage}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.listContent}
+                showsVerticalScrollIndicator={false}
+              />
+
+              {/* Input Area */}
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  ref={inputRef}
+                  style={[styles.input, { color: textColor }]}
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder="Type your message..."
+                  placeholderTextColor={textColor + '80'}
+                  multiline
+                  onSubmitEditing={handleSend}
+                  blurOnSubmit={false}
+                  onKeyPress={handleKeyPress}
+                  returnKeyType="send"
+                />
+                <TouchableOpacity
+                  style={[styles.sendButton, (!input.trim() || responseIndex >= responses.length) && styles.sendButtonDisabled]}
+                  onPress={handleSend}
+                  disabled={!input.trim() || responseIndex >= responses.length}
+                  activeOpacity={0.8}
+                >
+                  <IconButton icon="send" size={20} iconColor="white" style={styles.sendIcon} />
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+
+            {responseIndex >= responses.length && (
+              <View style={styles.endOfResponses}>
+                <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
+              </View>
+            )}
+          </View>
+        </ThemedView>
+      </PaperProvider>
+    </>
   );
 }
 

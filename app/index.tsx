@@ -1,5 +1,6 @@
-import { Redirect } from 'expo-router';
+import { Redirect } from "expo-router"
+import React from 'react'
 
-export default function Index() {
-  return <Redirect href="/chat" />;
+export default function HomeScreen() {
+    return <Redirect href="/chat" />
 }
