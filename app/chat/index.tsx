@@ -129,6 +129,23 @@ export default function ChatScreen() {
     });
   }, []);
 
+  const handleNewChat = useCallback(() => {
+    if (responses.length > 0) {
+      const welcomeMsg: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: responses[0].content,
+        isStreaming: false,
+      };
+      setMessages([welcomeMsg]);
+      setResponseIndex(1);
+    } else {
+      setMessages([]);
+      setResponseIndex(0);
+    }
+    setInput('');
+  }, []);
+
   const handleSend = useCallback(async () => {
     if (!input.trim() || responseIndex >= responses.length) return;
 
@@ -226,7 +243,7 @@ export default function ChatScreen() {
 
             {/* Nav items */}
             <View style={styles.navSection}>
-              <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={handleNewChat}>
                 <IconButton icon="chat-plus-outline" size={20} style={styles.navItemIcon} />
                 <ThemedText style={styles.navItemLabel}>New Chat</ThemedText>
               </TouchableOpacity>
