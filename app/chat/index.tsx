@@ -6,7 +6,7 @@ import { Stack } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FlatList, KeyboardAvoidingView, type ListRenderItem, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { IconButton, PaperProvider, useTheme } from 'react-native-paper';
+import { Button, IconButton, Menu, PaperProvider, useTheme } from 'react-native-paper';
 
 type Message = {
   id: string;
@@ -62,6 +62,8 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash-lite');
+  const [menuVisible, setMenuVisible] = useState(false);
   const chatRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
@@ -82,12 +84,27 @@ export default function ChatScreen() {
       setMessages([welcomeMsg]);
 
       try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+        const model = genAI.getGenerativeModel({ model: selectedModel });
         chatRef.current = model.startChat({
           history: [],
         });
       } catch (err) {
         console.error("Gemini init error:", err);
+      }
+    }
+  }, []); // Run only on mount
+
+  const handleModelChange = useCallback(async (newModel: string) => {
+    setSelectedModel(newModel);
+    setMenuVisible(false);
+
+    if (chatRef.current) {
+      try {
+        const history = await chatRef.current.getHistory();
+        const model = genAI.getGenerativeModel({ model: newModel });
+        chatRef.current = model.startChat({ history });
+      } catch (err) {
+        console.error("Error updating model:", err);
       }
     }
   }, []);
@@ -114,14 +131,14 @@ export default function ChatScreen() {
 
     // Reset the chat history in Gemini
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+      const model = genAI.getGenerativeModel({ model: selectedModel });
       chatRef.current = model.startChat({
         history: [],
       });
     } catch (err) {
       console.error("Gemini init error on new chat:", err);
     }
-  }, []);
+  }, [selectedModel]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isGenerating || !chatRef.current) return;
@@ -272,6 +289,34 @@ export default function ChatScreen() {
 
           {/* Main Content */}
           <View style={[styles.mainContent, { backgroundColor }]}>
+            <View style={styles.topBar}>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setMenuVisible(true)}
+                    icon="chevron-down"
+                    contentStyle={{ flexDirection: 'row-reverse' }}
+                    textColor={textColor}
+                    style={{ borderColor: textColor + '30' }}
+                  >
+                    {selectedModel}
+                  </Button>
+                }
+                style={styles.dropdownMenu}
+              >
+                <Menu.Item onPress={() => handleModelChange('gemini-2.0-flash')} title="2.0 Flash" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.0-flash-lite')} title="2.0 Flash Lite" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.5-flash')} title="2.5 Flash" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.5-flash-lite')} title="2.5 Flash Lite" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3-flash-preview')} title="3.0 Flash Preview" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3.1-flash-lite-preview')} title="3.1 Flash Lite Preview" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3.1-pro-preview')} title="3.1 Pro Preview" />
+              </Menu>
+            </View>
+
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.keyboardAvoiding}
@@ -386,6 +431,17 @@ const styles = StyleSheet.create({
   },
   keyboardAvoiding: {
     flex: 1,
+  },
+  topBar: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1, // needed for dropdown overlay to appear correctly
+  },
+  dropdownMenu: {
+    marginTop: 40,
   },
   listContent: {
     padding: 20,
