@@ -199,50 +199,34 @@ export default function ChatScreen() {
     <PaperProvider>
       <ThemedView style={styles.container}>
         {/* Sidebar Navigation */}
-        <Card style={styles.sidebar} mode="elevated">
-          <Card.Content>
-            <IconButton
-              icon="menu"
-              size={24}
-              style={styles.menuIcon}
-              onPress={() => {}}
-            />
-            <Button
-              mode="text"
-              onPress={() => {}}
-              style={styles.navButton}
-              icon="chat"
-            >
-              New Chat
-            </Button>
-            <Button
-              mode="text"
-              onPress={() => {}}
-              style={styles.navButton}
-              icon="history"
-            >
-              History
-            </Button>
-            <Button
-              mode="text"
-              onPress={() => {}}
-              style={styles.navButton}
-              icon="cog"
-            >
-              Settings
-            </Button>
-          </Card.Content>
-        </Card>
+        <View style={styles.sidebar}>
+          {/* App title / branding */}
+          <View style={styles.sidebarHeader}>
+            <ThemedText style={styles.sidebarTitle}>Matłumacz</ThemedText>
+            <ThemedText style={styles.sidebarSubtitle}>AI Assistant</ThemedText>
+          </View>
+
+          <View style={styles.sidebarDivider} />
+
+          {/* Nav items */}
+          <View style={styles.navSection}>
+            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <IconButton icon="chat-plus-outline" size={20} style={styles.navItemIcon} />
+              <ThemedText style={styles.navItemLabel}>New Chat</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <IconButton icon="history" size={20} style={styles.navItemIcon} />
+              <ThemedText style={styles.navItemLabel}>History</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <IconButton icon="cog-outline" size={20} style={styles.navItemIcon} />
+              <ThemedText style={styles.navItemLabel}>Settings</ThemedText>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Main Content */}
         <View style={styles.mainContent}>
-          {/* Header */}
-          <Card style={styles.header} mode="elevated">
-            <Card.Content style={styles.headerContent}>
-              <ThemedText type="title" style={styles.headerTitle}>Matłumacz</ThemedText>
-            </Card.Content>
-          </Card>
-
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={styles.keyboardAvoiding}
@@ -258,41 +242,35 @@ export default function ChatScreen() {
             />
 
             {/* Input Area */}
-            <Card style={[styles.inputContainer, { backgroundColor }]} mode="elevated">
-              <Card.Content style={styles.inputContent}>
-                <TextInput
-                  ref={inputRef}
-                  style={[styles.input, { color: textColor }]}
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Type your message..."
-                  placeholderTextColor={textColor + '80'}
-                  multiline
-                  onSubmitEditing={handleSend}
-                  blurOnSubmit={false}
-                  onKeyPress={handleKeyPress}
-                  returnKeyType="send"
-                />
-                <Button
-                  mode="contained"
-                  onPress={handleSend}
-                  disabled={!input.trim() || responseIndex >= responses.length}
-                  style={styles.sendButton}
-                  contentStyle={styles.sendButtonContent}
-                  icon="send"
-                >
-                  Send
-                </Button>
-              </Card.Content>
-            </Card>
+            <View style={styles.inputWrapper}>
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { color: textColor }]}
+                value={input}
+                onChangeText={setInput}
+                placeholder="Type your message..."
+                placeholderTextColor={textColor + '80'}
+                multiline
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
+                onKeyPress={handleKeyPress}
+                returnKeyType="send"
+              />
+              <TouchableOpacity
+                style={[styles.sendButton, (!input.trim() || responseIndex >= responses.length) && styles.sendButtonDisabled]}
+                onPress={handleSend}
+                disabled={!input.trim() || responseIndex >= responses.length}
+                activeOpacity={0.8}
+              >
+                <IconButton icon="send" size={20} iconColor="white" style={styles.sendIcon} />
+              </TouchableOpacity>
+            </View>
           </KeyboardAvoidingView>
 
           {responseIndex >= responses.length && (
-            <Card style={styles.endOfResponses} mode="outlined">
-              <Card.Content>
-                <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
-              </Card.Content>
-            </Card>
+            <View style={styles.endOfResponses}>
+              <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
+            </View>
           )}
         </View>
       </ThemedView>
@@ -304,49 +282,82 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
+    backgroundColor: '#F0F2F5',
   },
-  // Sidebar
+
+  // ── Sidebar ──────────────────────────────────────────────────────────
   sidebar: {
     width: 240,
+    backgroundColor: '#1A1D23',
     flexDirection: 'column',
-    margin: 8,
-    marginTop: 8,
+    paddingTop: 16,
+    paddingHorizontal: 12,
+    paddingBottom: 16,
   },
-  menuIcon: {
-    alignSelf: 'flex-start',
-    marginBottom: 16,
+  sidebarHeader: {
+    paddingHorizontal: 8,
+    paddingVertical: 12,
   },
-  navButton: {
-    marginVertical: 4,
-    justifyContent: 'flex-start',
+  sidebarTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  // Main Content
+  sidebarSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  sidebarDivider: {
+    height: 1,
+    backgroundColor: '#2D3139',
+    marginVertical: 12,
+    marginHorizontal: 8,
+  },
+  navSection: {
+    flexDirection: 'column',
+    gap: 2,
+  },
+  navItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    paddingRight: 12,
+    paddingVertical: 2,
+    marginVertical: 1,
+  },
+  navItemIcon: {
+    margin: 0,
+    width: 36,
+    height: 36,
+  },
+  navItemLabel: {
+    fontSize: 14,
+    color: '#C9CDD4',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+
+  // ── Main Content ─────────────────────────────────────────────────────
   mainContent: {
     flex: 1,
     flexDirection: 'column',
-  },
-  header: {
-    margin: 8,
-    marginBottom: 0,
-    padding: 12,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    textAlign: 'center',
+    backgroundColor: '#F0F2F5',
   },
   keyboardAvoiding: {
     flex: 1,
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 20,
+    padding: 20,
+    paddingBottom: 12,
   },
-  // Messages
+
+  // ── Messages ─────────────────────────────────────────────────────────
   messageContainer: {
-    marginBottom: 12,
-    maxWidth: '85%',
+    marginBottom: 14,
+    maxWidth: '80%',
   },
   userContainer: {
     alignSelf: 'flex-end',
@@ -355,94 +366,104 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   messageBubble: {
-    borderRadius: 16,
+    borderRadius: 18,
+    borderWidth: 0,
   },
   userBubble: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#4F6EF7',
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
   },
   messageContent: {
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   userText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
   },
   markdownContainer: {
     flex: 1,
   },
   markdownText: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownParagraph: {
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 12,
+    marginBottom: 10,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownBold: {
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownItalic: {
     fontStyle: 'italic',
-    fontSize: 16,
+    fontSize: 15,
     lineHeight: 22,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   inlineCode: {
-    backgroundColor: '#E5E5EA',
-    paddingHorizontal: 4,
+    backgroundColor: '#EEF0F3',
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 4,
     fontFamily: Platform.OS === 'web' ? 'monospace' : 'monospace',
-    fontSize: 14,
-    color: '#11181C',
+    fontSize: 13,
+    color: '#E3445A',
   },
   codeBlock: {
     fontFamily: Platform.OS === 'web' ? 'monospace' : 'monospace',
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 20,
-    color: '#11181C',
+    color: '#E8EAF0',
   },
   codeContainer: {
-    backgroundColor: '#1E1E1E',
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#1E2130',
+    padding: 14,
+    borderRadius: 10,
     marginVertical: 8,
   },
   heading1: {
-    textAlign: 'center',
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginVertical: 8,
+    color: '#11181C',
+    backgroundColor: 'transparent',
   },
   heading2: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     marginVertical: 8,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading3: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     marginVertical: 6,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading4: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: 'bold',
     marginVertical: 4,
     color: '#11181C',
@@ -457,84 +478,106 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   blockquote: {
-    borderLeftWidth: 4,
-    borderLeftColor: '#007AFF',
+    borderLeftWidth: 3,
+    borderLeftColor: '#4F6EF7',
     paddingLeft: 12,
     marginVertical: 8,
-    backgroundColor: '#F0F7FF',
+    backgroundColor: '#F0F4FF',
     borderRadius: 4,
+    paddingVertical: 4,
   },
   hr: {
     height: 1,
-    backgroundColor: '#ccc',
-    marginVertical: 8,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 10,
   },
   table: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
+    borderColor: '#E5E7EB',
+    borderRadius: 6,
     marginVertical: 8,
+    overflow: 'hidden',
   },
   tableRow: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#E5E7EB',
   },
   tableCellHeader: {
     flex: 1,
     padding: 8,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#F3F4F6',
     borderRightWidth: 1,
-    borderRightColor: '#ccc',
+    borderRightColor: '#E5E7EB',
   },
   tableCell: {
     flex: 1,
     padding: 8,
     borderRightWidth: 1,
-    borderRightColor: '#ccc',
+    borderRightColor: '#E5E7EB',
   },
   tableCellText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#11181C',
     backgroundColor: 'transparent',
   },
   streamingIndicator: {
     fontSize: 16,
-    color: '#007AFF',
+    color: '#4F6EF7',
   },
-  // Input
-  inputContainer: {
-    margin: 8,
-    marginTop: 0,
-  },
-  inputContent: {
+
+  // ── Input ─────────────────────────────────────────────────────────────
+  inputWrapper: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
+    alignItems: 'flex-end',
+    margin: 16,
+    marginTop: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    paddingLeft: 16,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
   input: {
     flex: 1,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 20,
-    marginRight: 12,
     maxHeight: 120,
-    fontSize: 16,
-    backgroundColor: 'white',
-  },
+    fontSize: 15,
+    paddingTop: 8,
+    paddingBottom: 8,
+    outlineStyle: 'none',
+  } as any,
   sendButton: {
-    marginLeft: 8,
-  },
-  sendButtonContent: {
+    width: 40,
     height: 40,
-  },
-  endOfResponses: {
-    margin: 8,
+    borderRadius: 20,
+    backgroundColor: '#4F6EF7',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 6,
+    alignSelf: 'flex-end',
+    marginBottom: 0,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#C5CEED',
+  },
+  sendIcon: {
+    margin: 0,
+  },
+
+  // ── End of demo ───────────────────────────────────────────────────────
+  endOfResponses: {
+    alignItems: 'center',
+    paddingBottom: 8,
   },
   endOfResponsesText: {
     fontSize: 12,
-    color: '#888',
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
 });
