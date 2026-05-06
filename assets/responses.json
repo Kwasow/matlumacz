@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "content": "Hello! I'm **Matłumacz**, your AI assistant. How can I help you today?"
+  },
+  {
+    "id": 2,
+    "content": "I can help you with many things:\n\n- Answer questions\n- Explain concepts\n- Write code\n- Translate text\n- And much more!\n\nWhat would you like to know?"
+  },
+  {
+    "id": 3,
+    "content": "That's an interesting question! Let me think about that...\n\nHere are some facts you might find useful:\n\n1. **React Native** is a framework for building mobile apps\n2. **Expo** makes React Native development easier\n3. **TypeScript** adds type safety to JavaScript"
+  },
+  {
+    "id": 4,
+    "content": "### Example Code\n\nHere's a simple React component:\n\n```typescript\nimport React from 'react';\nimport { Text, View } from 'react-native';\n\nexport default function App() {\n  return (\n    <View>\n      <Text>Hello World!</Text>\n    </View>\n  );\n}\n```\n\nYou can customize it as needed."
+  },
+  {
+    "id": 5,
+    "content": "### Features of Matłumacz\n\n- ✅ Fast responses\n- ✅ Markdown support\n- ✅ Code syntax highlighting\n- ✅ Easy to use\n- ✅ Web compatible\n\nTry asking me about:\n- JavaScript\n- React\n- Programming\n- Or anything else!"
+  },
+  {
+    "id": 6,
+    "content": "Did you know?\n\n> The name **Matłumacz** means \"translator\" in Polish.\n\nI'm designed to help you understand and translate information easily. Whether you need help with code, explanations, or translations, I'm here to assist!"
+  },
+  {
+    "id": 7,
+    "content": "### Quick Tips\n\n1. **Be specific** - The more details you provide, the better I can help\n2. **Ask anything** - No question is too small or too big\n3. **Use markdown** - You can format your messages with markdown\n\nHow can I assist you further?"
+  },
+  {
+    "id": 8,
+    "content": "Here's a helpful table:\n\n| Feature | Supported |\n|---------|----------|\n| Markdown | ✅ Yes |\n| Code blocks | ✅ Yes |\n| Tables | ✅ Yes |\n| Lists | ✅ Yes |\n| Streaming | ✅ Yes |"
+  },
+  {
+    "id": 9,
+    "content": "### Mathematical Example\n\nYou can also render equations:\n\nThe quadratic formula is:\n\n$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$\n\nWhile this is a simple example, markdown formatting makes complex information easy to read."
+  },
+  {
+    "id": 10,
+    "content": "Thanks for chatting with Matłumacz! 🎉\n\nI hope you found this conversation helpful. Feel free to ask more questions anytime.\n\nHave a great day!"
+  }
+]
