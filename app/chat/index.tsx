@@ -1,6 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Stack } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -14,12 +15,8 @@ type Message = {
   isStreaming?: boolean;
 };
 
-type Response = {
-  id: number;
-  content: string;
-};
-
-const responses: Response[] = require('@/assets/responses.json');
+// Inicjalizacja instancji Google Gemini
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
 
 const renderSafeView = (children: React.ReactNode) => {
   return React.Children.map(children, (child) =>
@@ -64,7 +61,8 @@ const MarkdownComponents = {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [responseIndex, setResponseIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const chatRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
   const backgroundColor = useThemeColor({}, 'background');
@@ -74,15 +72,23 @@ export default function ChatScreen() {
 
   // Auto-add welcome message on mount
   useEffect(() => {
-    if (messages.length === 0 && responses.length > 0) {
+    if (messages.length === 0) {
       const welcomeMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: responses[0].content,
+        content: 'Cześć! W czym mogę Ci dzisiaj pomóc?',
         isStreaming: false,
       };
       setMessages([welcomeMsg]);
-      setResponseIndex(1);
+
+      try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+        chatRef.current = model.startChat({
+          history: [],
+        });
+      } catch (err) {
+        console.error("Gemini init error:", err);
+      }
     }
   }, []);
 
@@ -95,72 +101,46 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  const streamResponse = useCallback(async (responseContent: string) => {
-    const words = responseContent.split(' ');
-    let streamedContent = '';
-
-    return new Promise<string>((resolve) => {
-      const interval = setInterval(() => {
-        if (words.length === 0) {
-          clearInterval(interval);
-          resolve(streamedContent);
-          return;
-        }
-
-        const nextWord = words.shift()!;
-        streamedContent += (streamedContent ? ' ' : '') + nextWord;
-
-        setMessages((prev) => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].isStreaming) {
-            updated[updated.length - 1] = {
-              ...updated[updated.length - 1],
-              content: streamedContent + (words.length > 0 ? ' ' : ''),
-            };
-          }
-          return updated;
-        });
-
-        if (words.length === 0) {
-          clearInterval(interval);
-          resolve(streamedContent);
-        }
-      }, 30);
-    });
-  }, []);
-
   const handleNewChat = useCallback(() => {
-    if (responses.length > 0) {
-      const welcomeMsg: Message = {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: responses[0].content,
-        isStreaming: false,
-      };
-      setMessages([welcomeMsg]);
-      setResponseIndex(1);
-    } else {
-      setMessages([]);
-      setResponseIndex(0);
-    }
+    const welcomeMsg: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: 'Cześć! W czym mogę Ci dzisiaj pomóc?',
+      isStreaming: false,
+    };
+    setMessages([welcomeMsg]);
     setInput('');
+    setIsGenerating(false);
+
+    // Reset the chat history in Gemini
+    try {
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+      chatRef.current = model.startChat({
+        history: [],
+      });
+    } catch (err) {
+      console.error("Gemini init error on new chat:", err);
+    }
   }, []);
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || responseIndex >= responses.length) return;
+    if (!input.trim() || isGenerating || !chatRef.current) return;
 
+    const userText = input.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: userText,
     };
 
     setInput('');
+    setIsGenerating(true);
     setMessages((prev) => [...prev, userMessage]);
 
     // Add assistant message with empty content initially
+    const assistantId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
+      id: assistantId,
       role: 'assistant',
       content: '',
       isStreaming: true,
@@ -168,27 +148,59 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Stream the response
-    const currentResponseIndex = responseIndex;
-    setResponseIndex((prev) => prev + 1);
+    try {
+      // Use Gemini to get a streaming response
+      const result = await chatRef.current.sendMessageStream(userText);
+      let fullText = '';
 
-    await streamResponse(responses[currentResponseIndex].content);
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullText += chunkText;
 
-    // Update message to mark streaming as complete
-    setMessages((prev) => {
-      const updated = [...prev];
-      if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          isStreaming: false,
-        };
+        setMessages((prev) => {
+          const updated = [...prev];
+          const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+          if (assistantMsgIndex !== -1) {
+            updated[assistantMsgIndex] = {
+              ...updated[assistantMsgIndex],
+              content: fullText,
+            };
+          }
+          return updated;
+        });
       }
-      return updated;
-    });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages((prev) => {
+        const updated = [...prev];
+        const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+        if (assistantMsgIndex !== -1) {
+          updated[assistantMsgIndex] = {
+            ...updated[assistantMsgIndex],
+            content: 'Przepraszam, wystąpił błąd podczas generowania odpowiedzi. Upewnij się, że Twój klucz API jest prawidłowy.',
+          };
+        }
+        return updated;
+      });
+    } finally {
+      setIsGenerating(false);
+      // Update message to mark streaming as complete
+      setMessages((prev) => {
+        const updated = [...prev];
+        const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+        if (assistantMsgIndex !== -1) {
+          updated[assistantMsgIndex] = {
+            ...updated[assistantMsgIndex],
+            isStreaming: false,
+          };
+        }
+        return updated;
+      });
 
-    // Focus input after sending
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [input, responseIndex, streamResponse]);
+      // Focus input after sending
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [input, isGenerating]);
 
   const handleKeyPress = useCallback((e: { nativeEvent: { key: string } }) => {
     if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
@@ -290,21 +302,15 @@ export default function ChatScreen() {
                   returnKeyType="send"
                 />
                 <TouchableOpacity
-                  style={[styles.sendButton, (!input.trim() || responseIndex >= responses.length) && styles.sendButtonDisabled]}
+                  style={[styles.sendButton, (!input.trim() || isGenerating) && styles.sendButtonDisabled]}
                   onPress={handleSend}
-                  disabled={!input.trim() || responseIndex >= responses.length}
+                  disabled={!input.trim() || isGenerating}
                   activeOpacity={0.8}
                 >
                   <IconButton icon="send" size={20} iconColor="white" style={styles.sendIcon} />
                 </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>
-
-            {responseIndex >= responses.length && (
-              <View style={styles.endOfResponses}>
-                <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
-              </View>
-            )}
           </View>
         </ThemedView>
       </PaperProvider>
