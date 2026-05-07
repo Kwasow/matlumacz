@@ -1,11 +1,12 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Stack } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { FlatList, KeyboardAvoidingView, type ListRenderItem, Platform, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { Card, IconButton, PaperProvider, useTheme } from 'react-native-paper';
+import { Button, IconButton, Menu, PaperProvider, useTheme } from 'react-native-paper';
 
 type Message = {
   id: string;
@@ -14,12 +15,18 @@ type Message = {
   isStreaming?: boolean;
 };
 
-type Response = {
-  id: number;
-  content: string;
-};
+// Inicjalizacja instancji Google Gemini
+const genAI = new GoogleGenerativeAI(process.env.EXPO_PUBLIC_GEMINI_API_KEY || '');
 
-const responses: Response[] = require('@/assets/responses.json');
+const renderSafeView = (children: React.ReactNode) => {
+  return React.Children.map(children, (child) =>
+    typeof child === 'string' || typeof child === 'number'
+      ? String(child).trim() === ''
+        ? null
+        : <ThemedText>{child}</ThemedText>
+      : child
+  );
+};
 
 // Custom markdown components that work with Paper
 const MarkdownComponents = {
@@ -38,15 +45,15 @@ const MarkdownComponents = {
   h2: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading2}>{children}</ThemedText>,
   h3: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading3}>{children}</ThemedText>,
   h4: ({ children }: { children: React.ReactNode }) => <ThemedText style={styles.heading4}>{children}</ThemedText>,
-  ul: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{children}</View>,
-  ol: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{children}</View>,
-  li: ({ children }: { children: React.ReactNode }) => <View style={styles.listItem}><ThemedText>{children}</ThemedText></View>,
-  blockquote: ({ children }: { children: React.ReactNode }) => <View style={styles.blockquote}>{children}</View>,
+  ul: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{renderSafeView(children)}</View>,
+  ol: ({ children }: { children: React.ReactNode }) => <View style={styles.list}>{renderSafeView(children)}</View>,
+  li: ({ children }: { children: React.ReactNode }) => <View style={styles.listItem}>{renderSafeView(children)}</View>,
+  blockquote: ({ children }: { children: React.ReactNode }) => <View style={styles.blockquote}>{renderSafeView(children)}</View>,
   hr: () => <View style={styles.hr} />,
-  table: ({ children }: { children: React.ReactNode }) => <View style={styles.table}>{children}</View>,
-  thead: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{children}</View>,
-  tbody: ({ children }: { children: React.ReactNode }) => <View>{children}</View>,
-  tr: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{children}</View>,
+  table: ({ children }: { children: React.ReactNode }) => <View style={styles.table}>{renderSafeView(children)}</View>,
+  thead: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{renderSafeView(children)}</View>,
+  tbody: ({ children }: { children: React.ReactNode }) => <View>{renderSafeView(children)}</View>,
+  tr: ({ children }: { children: React.ReactNode }) => <View style={styles.tableRow}>{renderSafeView(children)}</View>,
   th: ({ children }: { children: React.ReactNode }) => <View style={styles.tableCellHeader}><ThemedText style={styles.tableCellText}>{children}</ThemedText></View>,
   td: ({ children }: { children: React.ReactNode }) => <View style={styles.tableCell}><ThemedText style={styles.tableCellText}>{children}</ThemedText></View>,
 };
@@ -54,7 +61,10 @@ const MarkdownComponents = {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
-  const [responseIndex, setResponseIndex] = useState(0);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash-lite');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const chatRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
   const backgroundColor = useThemeColor({}, 'background');
@@ -64,15 +74,38 @@ export default function ChatScreen() {
 
   // Auto-add welcome message on mount
   useEffect(() => {
-    if (messages.length === 0 && responses.length > 0) {
+    if (messages.length === 0) {
       const welcomeMsg: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: responses[0].content,
+        content: 'Cześć! W czym mogę Ci dzisiaj pomóc?',
         isStreaming: false,
       };
       setMessages([welcomeMsg]);
-      setResponseIndex(1);
+
+      try {
+        const model = genAI.getGenerativeModel({ model: selectedModel });
+        chatRef.current = model.startChat({
+          history: [],
+        });
+      } catch (err) {
+        console.error("Gemini init error:", err);
+      }
+    }
+  }, []); // Run only on mount
+
+  const handleModelChange = useCallback(async (newModel: string) => {
+    setSelectedModel(newModel);
+    setMenuVisible(false);
+
+    if (chatRef.current) {
+      try {
+        const history = await chatRef.current.getHistory();
+        const model = genAI.getGenerativeModel({ model: newModel });
+        chatRef.current = model.startChat({ history });
+      } catch (err) {
+        console.error("Error updating model:", err);
+      }
     }
   }, []);
 
@@ -85,55 +118,46 @@ export default function ChatScreen() {
     }
   }, [messages]);
 
-  const streamResponse = useCallback(async (responseContent: string) => {
-    const words = responseContent.split(' ');
-    let streamedContent = '';
+  const handleNewChat = useCallback(() => {
+    const welcomeMsg: Message = {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: 'Cześć! W czym mogę Ci dzisiaj pomóc?',
+      isStreaming: false,
+    };
+    setMessages([welcomeMsg]);
+    setInput('');
+    setIsGenerating(false);
 
-    return new Promise<string>((resolve) => {
-      const interval = setInterval(() => {
-        if (words.length === 0) {
-          clearInterval(interval);
-          resolve(streamedContent);
-          return;
-        }
-
-        const nextWord = words.shift()!;
-        streamedContent += (streamedContent ? ' ' : '') + nextWord;
-
-        setMessages((prev) => {
-          const updated = [...prev];
-          if (updated.length > 0 && updated[updated.length - 1].role === 'assistant' && updated[updated.length - 1].isStreaming) {
-            updated[updated.length - 1] = {
-              ...updated[updated.length - 1],
-              content: streamedContent + (words.length > 0 ? ' ' : ''),
-            };
-          }
-          return updated;
-        });
-
-        if (words.length === 0) {
-          clearInterval(interval);
-          resolve(streamedContent);
-        }
-      }, 30);
-    });
-  }, []);
+    // Reset the chat history in Gemini
+    try {
+      const model = genAI.getGenerativeModel({ model: selectedModel });
+      chatRef.current = model.startChat({
+        history: [],
+      });
+    } catch (err) {
+      console.error("Gemini init error on new chat:", err);
+    }
+  }, [selectedModel]);
 
   const handleSend = useCallback(async () => {
-    if (!input.trim() || responseIndex >= responses.length) return;
+    if (!input.trim() || isGenerating || !chatRef.current) return;
 
+    const userText = input.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: input.trim(),
+      content: userText,
     };
 
     setInput('');
+    setIsGenerating(true);
     setMessages((prev) => [...prev, userMessage]);
 
     // Add assistant message with empty content initially
+    const assistantId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
+      id: assistantId,
       role: 'assistant',
       content: '',
       isStreaming: true,
@@ -141,27 +165,59 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, assistantMessage]);
 
-    // Stream the response
-    const currentResponseIndex = responseIndex;
-    setResponseIndex((prev) => prev + 1);
+    try {
+      // Use Gemini to get a streaming response
+      const result = await chatRef.current.sendMessageStream(userText);
+      let fullText = '';
 
-    await streamResponse(responses[currentResponseIndex].content);
+      for await (const chunk of result.stream) {
+        const chunkText = chunk.text();
+        fullText += chunkText;
 
-    // Update message to mark streaming as complete
-    setMessages((prev) => {
-      const updated = [...prev];
-      if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
-        updated[updated.length - 1] = {
-          ...updated[updated.length - 1],
-          isStreaming: false,
-        };
+        setMessages((prev) => {
+          const updated = [...prev];
+          const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+          if (assistantMsgIndex !== -1) {
+            updated[assistantMsgIndex] = {
+              ...updated[assistantMsgIndex],
+              content: fullText,
+            };
+          }
+          return updated;
+        });
       }
-      return updated;
-    });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages((prev) => {
+        const updated = [...prev];
+        const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+        if (assistantMsgIndex !== -1) {
+          updated[assistantMsgIndex] = {
+            ...updated[assistantMsgIndex],
+            content: 'Przepraszam, wystąpił błąd podczas generowania odpowiedzi. Upewnij się, że Twój klucz API jest prawidłowy.',
+          };
+        }
+        return updated;
+      });
+    } finally {
+      setIsGenerating(false);
+      // Update message to mark streaming as complete
+      setMessages((prev) => {
+        const updated = [...prev];
+        const assistantMsgIndex = updated.findIndex((msg) => msg.id === assistantId);
+        if (assistantMsgIndex !== -1) {
+          updated[assistantMsgIndex] = {
+            ...updated[assistantMsgIndex],
+            isStreaming: false,
+          };
+        }
+        return updated;
+      });
 
-    // Focus input after sending
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }, [input, responseIndex, streamResponse]);
+      // Focus input after sending
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [input, isGenerating]);
 
   const handleKeyPress = useCallback((e: { nativeEvent: { key: string } }) => {
     if (e.nativeEvent.key === 'Enter' && !e.nativeEvent.shiftKey) {
@@ -176,25 +232,28 @@ export default function ChatScreen() {
 
     return (
       <View style={[styles.messageContainer, isUser ? styles.userContainer : styles.assistantContainer]}>
-        <Card
-          mode="outlined"
-          style={[styles.messageBubble, isUser ? styles.userBubble : styles.assistantBubble]}
-          contentStyle={styles.messageContent}
+        <View
+          style={[
+            styles.messageBubble,
+            isUser ? styles.userBubble : [styles.assistantBubble, { backgroundColor, borderColor: textColor + '30', borderWidth: 1 }]
+          ]}
         >
-          {isUser ? (
-            <ThemedText style={styles.userText}>{item.content}</ThemedText>
-          ) : (
-            <View style={styles.markdownContainer}>
-              <ReactMarkdown components={MarkdownComponents}>
-                {item.content}
-              </ReactMarkdown>
-              {item.isStreaming && <ThemedText style={styles.streamingIndicator}>|</ThemedText>}
-            </View>
-          )}
-        </Card>
+          <View style={styles.messageContent}>
+            {isUser ? (
+              <ThemedText style={styles.userText}>{item.content}</ThemedText>
+            ) : (
+              <View style={styles.markdownContainer}>
+                <ReactMarkdown components={MarkdownComponents}>
+                  {item.content}
+                </ReactMarkdown>
+                {item.isStreaming && <ThemedText style={styles.streamingIndicator}>|</ThemedText>}
+              </View>
+            )}
+          </View>
+        </View>
       </View>
     );
-  }, []);
+  }, [backgroundColor, textColor]);
 
   return (
     <>
@@ -213,7 +272,7 @@ export default function ChatScreen() {
 
             {/* Nav items */}
             <View style={styles.navSection}>
-              <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.navItem} activeOpacity={0.7} onPress={handleNewChat}>
                 <IconButton icon="chat-plus-outline" size={20} style={styles.navItemIcon} />
                 <ThemedText style={styles.navItemLabel}>New Chat</ThemedText>
               </TouchableOpacity>
@@ -229,7 +288,35 @@ export default function ChatScreen() {
           </View>
 
           {/* Main Content */}
-          <View style={styles.mainContent}>
+          <View style={[styles.mainContent, { backgroundColor }]}>
+            <View style={styles.topBar}>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setMenuVisible(true)}
+                    icon="chevron-down"
+                    contentStyle={{ flexDirection: 'row-reverse' }}
+                    textColor={textColor}
+                    style={{ borderColor: textColor + '30' }}
+                  >
+                    {selectedModel}
+                  </Button>
+                }
+                style={styles.dropdownMenu}
+              >
+                <Menu.Item onPress={() => handleModelChange('gemini-2.0-flash')} title="2.0 Flash" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.0-flash-lite')} title="2.0 Flash Lite" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.5-flash')} title="2.5 Flash" />
+                <Menu.Item onPress={() => handleModelChange('gemini-2.5-flash-lite')} title="2.5 Flash Lite" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3-flash-preview')} title="3.0 Flash Preview" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3.1-flash-lite-preview')} title="3.1 Flash Lite Preview" />
+                <Menu.Item onPress={() => handleModelChange('gemini-3.1-pro-preview')} title="3.1 Pro Preview" />
+              </Menu>
+            </View>
+
             <KeyboardAvoidingView
               behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
               style={styles.keyboardAvoiding}
@@ -245,7 +332,7 @@ export default function ChatScreen() {
               />
 
               {/* Input Area */}
-              <View style={styles.inputWrapper}>
+              <View style={[styles.inputWrapper, { backgroundColor, borderColor: textColor + '30' }]}>
                 <TextInput
                   ref={inputRef}
                   style={[styles.input, { color: textColor }]}
@@ -260,21 +347,15 @@ export default function ChatScreen() {
                   returnKeyType="send"
                 />
                 <TouchableOpacity
-                  style={[styles.sendButton, (!input.trim() || responseIndex >= responses.length) && styles.sendButtonDisabled]}
+                  style={[styles.sendButton, (!input.trim() || isGenerating) && styles.sendButtonDisabled]}
                   onPress={handleSend}
-                  disabled={!input.trim() || responseIndex >= responses.length}
+                  disabled={!input.trim() || isGenerating}
                   activeOpacity={0.8}
                 >
                   <IconButton icon="send" size={20} iconColor="white" style={styles.sendIcon} />
                 </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>
-
-            {responseIndex >= responses.length && (
-              <View style={styles.endOfResponses}>
-                <ThemedText style={styles.endOfResponsesText}>End of conversation demo</ThemedText>
-              </View>
-            )}
           </View>
         </ThemedView>
       </PaperProvider>
@@ -286,7 +367,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F0F2F5',
   },
 
   // ── Sidebar ──────────────────────────────────────────────────────────
@@ -348,10 +428,20 @@ const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
     flexDirection: 'column',
-    backgroundColor: '#F0F2F5',
   },
   keyboardAvoiding: {
     flex: 1,
+  },
+  topBar: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 1, // needed for dropdown overlay to appear correctly
+  },
+  dropdownMenu: {
+    marginTop: 40,
   },
   listContent: {
     padding: 20,
@@ -374,11 +464,10 @@ const styles = StyleSheet.create({
     borderWidth: 0,
   },
   userBubble: {
-    backgroundColor: '#4F6EF7',
+    backgroundColor: '#64748B',
     borderBottomRightRadius: 4,
   },
   assistantBubble: {
-    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -400,28 +489,24 @@ const styles = StyleSheet.create({
   markdownText: {
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownParagraph: {
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 10,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownBold: {
     fontWeight: 'bold',
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   markdownItalic: {
     fontStyle: 'italic',
     fontSize: 15,
     lineHeight: 22,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   inlineCode: {
@@ -449,28 +534,24 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginVertical: 8,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading2: {
     fontSize: 18,
     fontWeight: 'bold',
     marginVertical: 8,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading3: {
     fontSize: 16,
     fontWeight: 'bold',
     marginVertical: 6,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   heading4: {
     fontSize: 15,
     fontWeight: 'bold',
     marginVertical: 4,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   list: {
@@ -522,7 +603,6 @@ const styles = StyleSheet.create({
   },
   tableCellText: {
     fontSize: 13,
-    color: '#11181C',
     backgroundColor: 'transparent',
   },
   streamingIndicator: {
