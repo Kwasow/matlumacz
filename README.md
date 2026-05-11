@@ -19,3 +19,29 @@ This app uses Google's Gemini AI. To use the chat features, you'll need to confi
 npm install
 npm run web
 ```
+
+## Running the server
+
+```bash
+# Install dependencies
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Run the code
+fastapi dev
+```
+
+Example request:
+
+```bash
+curl -X 'POST' \
+        'http://localhost:8000/api/compile' \
+        -H 'accept: application/json' \
+        -H 'Content-Type: application/json' \
+        -d '{"code": "Test code"}'
+```
+
+Static file example url: <http://localhost:8000/res/example.txt>
+
+Docs also generated at `localhost:8000/docs`
