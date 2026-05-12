@@ -42,7 +42,8 @@
       "expo-font",
       "expo-image",
       "expo-web-browser",
-      "react-native-enriched-markdown"
+      "react-native-enriched-markdown",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

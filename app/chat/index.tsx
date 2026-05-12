@@ -1,5 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { ManimVideo } from '@/components/manim-vid';
+import { hopefullyExtractManimCodeFromLLMHallucination, stripManimCodeBlocks } from '@/services/manim';
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Stack } from "expo-router";
@@ -25,6 +27,31 @@ type Message = {
   isStreaming?: boolean;
 };
 
+const MANIM_PROMPT = `
+Jesteś matematycznym korepetytorem. Tłumaczysz koncepcje krótko, po polsku, jako naturalną prozę.
+
+ZASADY FORMATOWANIA (rygorystyczne — odpowiedź renderuje się w środowisku, gdzie elementy blokowe psują layout):
+- Używaj WYŁĄCZNIE zwykłych akapitów rozdzielonych pustą linią.
+- ZABRONIONE: listy (ani \`-\`, \`*\`, ani numerowane). Wyliczenia zapisuj prozą: "po pierwsze..., następnie..., wreszcie...".
+- ZABRONIONE: nagłówki (\`#\`, \`##\`, ...). Tytuły sekcji wyróżniaj pogrubieniem na początku akapitu, np. **Intuicja:** ...
+- ZABRONIONE: blockquote (\`>\`), tabele, horizontal rules (\`---\`), block math (\`$$...$$\`).
+- DOZWOLONE: zwykły akapit, **pogrubienie**, *kursywa*, \`inline code\`, oraz inline math.
+
+WZORY MATEMATYCZNE — TYLKO inline z \`$...$\`:
+- każdy wzór, krótki i długi, owijaj w \`$...$\` (np. \`$2 + 2 = 4$\`, \`$\\sum_{i=0}^{n} i = \\frac{n(n+1)}{2}$\`)
+- używaj normalnej składni LaTeXa: \`\\frac\`, \`\\emptyset\`, \`\\cup\`, \`_\`, \`^\` itd.
+- NIE używaj \`\\( \\)\`, \`\\[ \\]\`, ani \`$$\`.
+
+ANIMACJA — gdy temat zyskuje na wizualizacji, dołącz JEDEN blok kodu Manim Community Edition:
+- otwórz blokiem \`\`\`python i zamknij \`\`\`
+- importuj \`from manim import *\`
+- zdefiniuj DOKŁADNIE jedną klasę dziedziczącą po \`Scene\`
+- nie umieszczaj żadnego tekstu wewnątrz bloku poza samym kodem
+- używaj wyłącznie API Manim CE (nie 3blue1brown/manimgl)
+Animacja powinna trwać 5–15 sekund.
+- Odpowiadaj animacją na każde zapytanie użytkownika jeżeli da sie je zwizualizować
+`.trim();
+
 // Inicjalizacja instancji Google Gemini
 const genAI = new GoogleGenerativeAI(
   process.env.EXPO_PUBLIC_GEMINI_API_KEY || "",
@@ -46,7 +73,7 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash-lite");
+  const [selectedModel, setSelectedModel] = useState("gemini-3-flash-preview");
   const [menuVisible, setMenuVisible] = useState(false);
   const chatRef = useRef<any>(null);
   const flatListRef = useRef<FlatList>(null);
@@ -66,7 +93,7 @@ export default function ChatScreen() {
       setMessages([welcomeMsg]);
 
       try {
-        const model = genAI.getGenerativeModel({ model: selectedModel });
+        const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction: MANIM_PROMPT });
         chatRef.current = model.startChat({
           history: [],
         });
@@ -83,7 +110,7 @@ export default function ChatScreen() {
     if (chatRef.current) {
       try {
         const history = await chatRef.current.getHistory();
-        const model = genAI.getGenerativeModel({ model: newModel });
+        const model = genAI.getGenerativeModel({ model: newModel, systemInstruction: MANIM_PROMPT });
         chatRef.current = model.startChat({ history });
       } catch (err) {
         console.error("Error updating model:", err);
@@ -113,7 +140,7 @@ export default function ChatScreen() {
 
     // Reset the chat history in Gemini
     try {
-      const model = genAI.getGenerativeModel({ model: selectedModel });
+      const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction: MANIM_PROMPT });
       chatRef.current = model.startChat({
         history: [],
       });
@@ -251,12 +278,15 @@ export default function ChatScreen() {
               ) : (
                 <View style={styles.markdownContainer}>
                   <EnrichedMarkdownText
-                    markdown={item.content}
+                    markdown={stripManimCodeBlocks(item.content)}
                     onLinkPress={({ url }) => Linking.openURL(url)}
                   />
                   {item.isStreaming && (
                     <ThemedText style={styles.streamingIndicator}>|</ThemedText>
                   )}
+                  {!item.isStreaming && hopefullyExtractManimCodeFromLLMHallucination(item.content).map((code, i) => (
+                    <ManimVideo key={`${item.id}-manim-${i}`} code={code} />
+                  ))}
                 </View>
               )}
             </View>
