@@ -45,3 +45,16 @@ curl -X 'POST' \
 Static file example url: <http://localhost:8000/res/example.txt>
 
 Docs also generated at `localhost:8000/docs`
+
+### Docker server
+
+Rebuild the image (every time requirements change):
+```
+docker build --tag "matlumacz" . --no-cache
+```
+
+Run the server:
+```
+docker run -p 8000:8000 -v "$PWD":/server
+```
+
