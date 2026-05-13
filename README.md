@@ -14,6 +14,14 @@ This app uses Google's Gemini AI. To use the chat features, you'll need to confi
    ```
 
 ## Get started
+Add the server URL to the `.env` file in the root of your project:
+```
+EXPO_PUBLIC_API_URL={server address}
+```
+For example:
+```
+EXPO_PUBLIC_API_URL=http://localhost:8000
+```
 
 ```
 npm install

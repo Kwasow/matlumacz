@@ -1,2 +1,7 @@
 .venv/
 venv/
+res/*.mp4
+res/*.py
+res/*.fail
+res/.media*
+__pycache__/
