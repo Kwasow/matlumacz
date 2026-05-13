@@ -1,10 +1,15 @@
+import { ManimVideo } from "@/components/manim-vid";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { ManimVideo } from '@/components/manim-vid';
 import { hopefullyExtractManimCodeFromLLMHallucination, stripManimCodeBlocks } from '@/services/manim';
 import { useThemeColor } from "@/hooks/use-theme-color";
+import {
+  hopefullyExtractManimCodeFromLLMHallucination,
+  stripManimCodeBlocks,
+} from "@/services/manim";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   FlatList,
@@ -69,6 +74,8 @@ const renderSafeView = (children: React.ReactNode) => {
   );
 };
 
+const router = useRouter();
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -93,7 +100,10 @@ export default function ChatScreen() {
       setMessages([welcomeMsg]);
 
       try {
-        const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction: MANIM_PROMPT });
+        const model = genAI.getGenerativeModel({
+          model: selectedModel,
+          systemInstruction: MANIM_PROMPT,
+        });
         chatRef.current = model.startChat({
           history: [],
         });
@@ -110,7 +120,10 @@ export default function ChatScreen() {
     if (chatRef.current) {
       try {
         const history = await chatRef.current.getHistory();
-        const model = genAI.getGenerativeModel({ model: newModel, systemInstruction: MANIM_PROMPT });
+        const model = genAI.getGenerativeModel({
+          model: newModel,
+          systemInstruction: MANIM_PROMPT,
+        });
         chatRef.current = model.startChat({ history });
       } catch (err) {
         console.error("Error updating model:", err);
@@ -140,7 +153,10 @@ export default function ChatScreen() {
 
     // Reset the chat history in Gemini
     try {
-      const model = genAI.getGenerativeModel({ model: selectedModel, systemInstruction: MANIM_PROMPT });
+      const model = genAI.getGenerativeModel({
+        model: selectedModel,
+        systemInstruction: MANIM_PROMPT,
+      });
       chatRef.current = model.startChat({
         history: [],
       });
@@ -284,9 +300,12 @@ export default function ChatScreen() {
                   {item.isStreaming && (
                     <ThemedText style={styles.streamingIndicator}>|</ThemedText>
                   )}
-                  {!item.isStreaming && hopefullyExtractManimCodeFromLLMHallucination(item.content).map((code, i) => (
-                    <ManimVideo key={`${item.id}-manim-${i}`} code={code} />
-                  ))}
+                  {!item.isStreaming &&
+                    hopefullyExtractManimCodeFromLLMHallucination(
+                      item.content,
+                    ).map((code, i) => (
+                      <ManimVideo key={`${item.id}-manim-${i}`} code={code} />
+                    ))}
                 </View>
               )}
             </View>
@@ -335,6 +354,18 @@ export default function ChatScreen() {
                   style={styles.navItemIcon}
                 />
                 <ThemedText style={styles.navItemLabel}>History</ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.navItem}
+                activeOpacity={0.7}
+                onPress={() => router.push("/tasks" as any)}
+              >
+                <IconButton
+                  icon="book-open-page-variant-outline"
+                  size={20}
+                  style={styles.navItemIcon}
+                />
+                <ThemedText style={styles.navItemLabel}>Baza zadań</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
                 <IconButton
