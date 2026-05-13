@@ -1,8 +1,6 @@
 import { ManimVideo } from "@/components/manim-vid";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { ManimVideo } from '@/components/manim-vid';
-import { hopefullyExtractManimCodeFromLLMHallucination, stripManimCodeBlocks } from '@/services/manim';
 import { useThemeColor } from "@/hooks/use-theme-color";
 import {
   hopefullyExtractManimCodeFromLLMHallucination,
